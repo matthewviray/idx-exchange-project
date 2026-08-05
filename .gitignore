@@ -1,6 +1,10 @@
 # Data
 data/
 
+# CatBoost training artifacts
+catboost_info/
+**/catboost_info/
+
 # Jupyter
 .ipynb_checkpoints/
 
