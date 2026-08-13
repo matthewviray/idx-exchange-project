@@ -1,6 +1,9 @@
 # Data
 data/
 
+# Trained model artifacts
+models/
+
 # CatBoost training artifacts
 catboost_info/
 **/catboost_info/
