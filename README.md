@@ -17,13 +17,14 @@ The dataset is restricted to observations where `PropertyType = "Residential"` a
 
 ## Dataset
 
-- **Source:** CRMLS (California Regional Multiple Listing Service) monthly sold-listing exports, `data/CRMLSSold<YYYYMM>.csv` for November 2025 through June 2026 (8 months).
+- **Source:** CRMLS (California Regional Multiple Listing Service) monthly sold-listing exports, `data/CRMLSSold<YYYYMM>.csv` for November 2025 through June 2026 (8 months), CA School District Areas 2024-25 boundaries from https://data.ca.gov/dataset/california-school-district-areas-2024-25/resource/7dfaf005-58eb-45db-93b1-7aff091b2172 .
 - **Scope:** filtered to `PropertyType = "Residential"`, `PropertySubType = "SingleFamilyResidence"`, and `StateOrProvince = "CA"`.
 - **Target:** `ClosePrice` (final sale price), modeled in log space (`LogClosePrice`) so error scales relatively across the price range rather than in raw dollars.
 - **Feature groups:**
   - *Size/structure:* `LivingArea`, `BedroomsTotal`, `BathroomsTotalInteger`, `YearBuilt`, `GarageSpaces`, `LotSizeSquareFeet`
   - *Location:* `CountyOrParish`, `Latitude`, `Longitude`, plus `PostalCode`, `City`, `MLSAreaMajor`, and a school `DistrictName` joined in from `data/ca_school_districts.geojson` (used by the tree/boosting models, not the linear baseline)
   - *Amenity flags:* `PoolPrivateYN`, `ViewYN`, `FireplaceYN`, `NewConstructionYN`, `HasAssociationFee`
+
 
 ## Preprocessing (`notebooks/02_preprocessing.ipynb`)
 
