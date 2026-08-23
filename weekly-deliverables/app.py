@@ -1,12 +1,15 @@
 """Streamlit app: predicts a California home's close price with the trained CatBoost model."""
 
+import os
+
 import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-MODEL_PATH = "../models/catboost_price_model.pkl"
-METADATA_PATH = "../models/catboost_price_model_metadata.pkl"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "..", "models", "catboost_price_model.pkl")
+METADATA_PATH = os.path.join(BASE_DIR, "..", "models", "catboost_price_model_metadata.pkl")
 
 st.set_page_config(page_title="CA Home Price Predictor", page_icon="🏡", layout="centered")
 
