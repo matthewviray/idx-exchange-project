@@ -56,6 +56,10 @@ Eight models/feature-encoding combinations were trained and evaluated on a held-
 
 **CatBoost** (one-hot encoded) was selected for deployment — it performs best on the price bands that make up the bulk of the test set ($500K-$2M, ~74% of listings), even though the native-categorical LightGBM/CatBoost variants edge it out on the blended metric. See `notebooks/06_evaluation.ipynb` for the full price-band breakdown.
 
+## Live App
+
+[CA Home Price Predictor](https://matthewviray-idx-exchange-project-weekly-deliverablesapp-ikt3in.streamlit.app/) — deployed Streamlit app using the saved CatBoost pipeline.
+
 ## How to Re-run
 
 **1. Install dependencies:**
@@ -77,7 +81,7 @@ pip install pandas numpy scikit-learn xgboost lightgbm catboost geopandas seabor
 
 The raw monthly CSVs (`data/CRMLSSold<YYYYMM>.csv`) and the school-district shapefile (`data/ca_school_districts.geojson`) must already be present in `data/` before running `02_preprocessing.ipynb`.
 
-**3. Save the deployment model:** run the last cell of `06_evaluation.ipynb` ("Save the CatBoost pipeline for deployment"). This writes `models/catboost_price_model.pkl` and `models/catboost_price_model_metadata.pkl` — `models/` is git-ignored, so these are regenerated locally rather than pulled from the repo.
+**3. Save the deployment model:** run the last cell of `06_evaluation.ipynb` ("Save the CatBoost pipeline for deployment"). This writes `models/catboost_price_model.pkl` and `models/catboost_price_model_metadata.pkl`, which are committed to the repo so the deployed app can load them directly.
 
 **4. Launch the app:**
 
