@@ -2,7 +2,9 @@
 data/
 
 # Trained model artifacts
-models/
+models/*
+!models/catboost_price_model.pkl
+!models/catboost_price_model_metadata.pkl
 
 # CatBoost training artifacts
 catboost_info/

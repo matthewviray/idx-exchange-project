@@ -19,7 +19,7 @@ The dataset is restricted to observations where `PropertyType = "Residential"` a
 
 - **Source:** CRMLS (California Regional Multiple Listing Service) monthly sold-listing exports, `data/CRMLSSold<YYYYMM>.csv` for November 2025 through June 2026 (8 months), CA School District Areas 2024-25 boundaries from https://data.ca.gov/dataset/california-school-district-areas-2024-25/resource/7dfaf005-58eb-45db-93b1-7aff091b2172 .
 - **Scope:** filtered to `PropertyType = "Residential"`, `PropertySubType = "SingleFamilyResidence"`, and `StateOrProvince = "CA"`.
-- **Target:** `ClosePrice` (final sale price), modeled in log space (`LogClosePrice`) so error scales relatively across the price range rather than in raw dollars.
+- **Target:** `ClosePrice` (final sale price), modeled in log space (`LogClosePrice`) so error scales relatively across the price range rather than in raw dollars as 'ClosePrice is highly right skewed.
 - **Feature groups:**
   - *Size/structure:* `LivingArea`, `BedroomsTotal`, `BathroomsTotalInteger`, `YearBuilt`, `GarageSpaces`, `LotSizeSquareFeet`
   - *Location:* `CountyOrParish`, `Latitude`, `Longitude`, plus `PostalCode`, `City`, `MLSAreaMajor`, and a school `DistrictName` joined in from `data/ca_school_districts.geojson` (used by the tree/boosting models, not the linear baseline)
@@ -28,28 +28,11 @@ The dataset is restricted to observations where `PropertyType = "Residential"` a
 
 ## Preprocessing (`notebooks/02_preprocessing.ipynb`)
 
-1. **Concatenate the 8 monthly CSVs, filter to single-family residential CA listings, drop duplicate `ListingKey`s, and null out any lat/long pairs falling outside California's bounding box.**
-   *Why:* the raw exports are per-month and include property types (condos, land, multi-family) outside this project's scope; a listing can appear more than once across monthly pulls (relisted, re-exported) so de-duping by its unique key avoids double-counting a single sale; a handful of listings carry corrupted coordinates (e.g. `(0, 0)` or swapped lat/long) that would silently poison any location feature, so those get nulled out to be handled by imputation/filtering downstream instead of treated as real geography.
-
-2. **Derive `HasAssociationFee` (`'True'`/`'False'`/`'Unknown'`) from `AssociationFee`.**
-   *Why:* `AssociationFee` itself is ~30% missing, and `0` is a legitimate "no HOA" value — so a raw numeric imputation (e.g. filling missing with the median fee) would incorrectly assign a nonzero fee to homes that either have no HOA or simply didn't report one. Collapsing to a 3-level flag sidesteps that ambiguity and keeps the "we don't actually know" case (`'Unknown'`) distinct from "no HOA" (`'False'`).
-
-3. **Apply hard sanity filters** (`ClosePrice > 0`, `LivingArea > 0`, `BedroomsTotal > 0`, `YearBuilt` between 1800–2026).
-   *Why:* these values are physically impossible or clear data-entry errors (a $0 sale, a 0 sq ft living area) — not real signal a model should try to learn from.
-
-4. **Trim the 1st/99th percentile tails of `ClosePrice`, `LivingArea`, and `LotSizeSquareFeet`, and cap `BedroomsTotal`/`BathroomsTotalInteger` at their 99th percentile.**
-   *Why:* the intent is to remove extreme outliers (data-entry typos, unusual luxury/estate listings) that would otherwise dominate the loss function and distort what the model learns for typical homes. 
-5. **Fill missing amenity flags (`ViewYN`, `PoolPrivateYN`, `FireplaceYN`, `NewConstructionYN`) and `PostalCode`/`City`/`MLSAreaMajor` with `'Unknown'`**, collapsing `MLSAreaMajor`'s own `"699 - Not Defined"` placeholder into `'Unknown'` too.
-   *Why:* these are categorical fields where "missing" is itself informative (the listing agent didn't report it) rather than something to guess at — treating it as its own category lets the model use that signal instead of losing the row or fabricating a value. `"699 - Not Defined"` is the MLS's own way of saying "unknown," so folding it into the same bucket avoids treating it as a real, distinct area.
-
-6. **Drop rows still missing a value in a *required* baseline column** (`ClosePrice`, `LivingArea`, `BedroomsTotal`, `BathroomsTotalInteger`, `YearBuilt`, `CountyOrParish`, `Latitude`, `Longitude`, and the now-filled amenity flags), **but not `GarageSpaces`/`LotSizeSquareFeet`.**
-   *Why we don't just impute everything:* `GarageSpaces` (3.60% missing) and `LotSizeSquareFeet` (1.76% missing) are numeric and reasonably approximated by the training median, so they're left as `NaN` here and median-imputed later *inside* the modeling pipeline (fit on train only, to avoid leaking test statistics into train). The other required columns are either the target itself (can't impute what you're trying to predict) or fields with negligible missingness to begin with (`Latitude`/`Longitude`/`YearBuilt` are each under 0.05% missing, and the amenity flags/postal/city were already backfilled to `'Unknown'` in step 5) — so in practice this drop removes a negligible fraction of rows; it isn't the primary way missing data gets handled. Median imputation, not row-dropping, does most of the work here.
-
-7. **Save two cleaned CSVs:** `cleaned_CRMLSSOLD_baseline.csv` (county + lat/long, no postal — used for the linear baseline) and `cleaned_CRMLSSOLD_all_features.csv` (adds `PostalCode`/`City`/`MLSAreaMajor` — used by the tree/boosting models).
- 
-
-8. **Train/test split is time-based, not random:** the most recent month is held out entirely as the test set, and all prior months are training data.
-   *Why:* the model's real use case is predicting a *future* sale from past sales, not interpolating within a single time period — a random split would let the model see listings from the same month (and often similar market conditions) in both train and test, overstating how well it'd generalize to genuinely new, later data.
+- Concatenate the 8 monthly CSVs, filter to single-family residential CA listings, and de-duplicate by `ListingKey`.
+- Clean up bad/missing values: null out corrupted lat/long pairs, derive a 3-level `HasAssociationFee` flag, apply sanity filters (e.g. `ClosePrice > 0`), trim outlier tails, and fill missing categorical fields with `'Unknown'`.
+- Drop rows still missing a *required* column; leave `GarageSpaces`/`LotSizeSquareFeet` as `NaN` for median imputation inside the modeling pipeline (fit on train only).
+- Save two cleaned CSVs: `cleaned_CRMLSSOLD_baseline.csv` (linear baseline) and `cleaned_CRMLSSOLD_all_features.csv` (adds postal/city/area, used by tree/boosting models).
+- Split train/test **by time** (most recent month held out) rather than randomly, since the model's real use case is predicting future sales from past data.
 
 ## Models Tested (`notebooks/03`–`06`)
 
@@ -62,7 +45,7 @@ Eight models/feature-encoding combinations were trained and evaluated on a held-
 
 | Model | Test R² | RMSE ($) | MAE ($) | MdAPE (%) | MAPE (%) |
 |---|---|---|---|---|---|
-| LightGBM (native cat) | 0.9359 | $280,659 | $145,355 | 7.61% | 10.91% |
+| **LightGBM (native cat)** | **0.9359** | **$280,659** | **$145,355** | **7.61%** | **10.91%** |
 | CatBoost (native cat) | 0.9351 | $285,349 | $147,746 | 7.70% | 11.02% |
 | CatBoost | 0.9335 | $285,480 | $149,841 | 8.04% | 11.24% |
 | LightGBM | 0.9333 | $283,380 | $148,965 | 7.99% | 11.24% |
