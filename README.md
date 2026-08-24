@@ -32,7 +32,7 @@ The dataset is restricted to observations where `PropertyType = "Residential"` a
 - Clean up bad/missing values: null out corrupted lat/long pairs, derive a 3-level `HasAssociationFee` flag, apply sanity filters (e.g. `ClosePrice > 0`), trim outlier tails, and fill missing categorical fields with `'Unknown'`.
 - Drop rows still missing a *required* column; leave `GarageSpaces`/`LotSizeSquareFeet` as `NaN` for median imputation inside the modeling pipeline (fit on train only).
 - Save two cleaned CSVs: `cleaned_CRMLSSOLD_baseline.csv` (linear baseline) and `cleaned_CRMLSSOLD_all_features.csv` (adds postal/city/area, used by tree/boosting models).
-- Split train/test **by time** (most recent month held out) rather than randomly, since the model's real use case is predicting future sales from past data.
+- Split train/test **by time** (most recent month held out) rather than randomly, since the model's real use case is predicting future sales from past data. Training set: **2025-11 to 2026-05** (7 months); test set: **2026-06** (the held-out month).
 
 ## Models Tested (`notebooks/03`–`06`)
 
@@ -91,3 +91,5 @@ streamlit run app.py
 ```
 
 This opens a form for a property's characteristics and returns a predicted close price with an approximate error margin, using the saved CatBoost pipeline from step 3.
+
+
