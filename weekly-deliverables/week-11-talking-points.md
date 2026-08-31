@@ -1,7 +1,6 @@
 # Week 11 Final Presentation Talking Points
 
-These notes cover only presentation points 1 and 2. They are written as speaker prompts rather than a script, so they can be shortened or expanded during the live Zoom presentation.
-
+These notes cover only presentation points 1 and 2 of the example structure that will be possibly used in the final presentation. Brainstorm introduction of final presentation.
 ## 1. The Problem We’re Solving
 
 ### Opening
